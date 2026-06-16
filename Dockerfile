@@ -19,7 +19,7 @@ WORKDIR /app
 COPY . .
 
 # Compile your application (Swap this line if you use CMake or standard g++)
-RUN make or_compile_command_here_like_g++_main.cpp_-o_server
+RUN g++ -std=c++17 -O2 -pthread -o server server.cpp  
 
 
 # ── STAGE 2: RUNTIME ENGINE ─────────────────────────────────────────
