@@ -562,6 +562,16 @@ body {
  * ─────────────────────────────────────────────────────────────────────────
  */
 
+function getSessionID() {
+  let sessionID = localStorage.getItem('matrix_arb_session');
+  if (!sessionID) {
+    // Generates a clean random string like "trader_a9f2x11"
+    sessionID = 'trader_' + Math.random().toString(36).substring(2, 11);
+    localStorage.setItem('matrix_arb_session', sessionID);
+  }
+  return sessionID;
+}
+
 const API = '';  // empty = same origin; change to 'http://your-server' if separate
 
 function routeToScreen(screenTarget) {
