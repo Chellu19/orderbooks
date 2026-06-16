@@ -321,22 +321,23 @@ struct GameState
 #include <mutex>
 #include <unordered_map>
 
-  std::unordered_map<std::string, GameState> sessions;
-  std::mutex sessionMutex;
+inline std::unordered_map<std::string, GameState>& getSessionMap() {
+    static std::unordered_map<std::string, GameState> instances;
+    return instances;
+}
 
-  // Thread-safe session controller
-  GameState &getOrCreateSession(const std::string &sessionId)
-  {
-    std::lock_guard<std::mutex> lock(sessionMutex);
-    if (sessions.find(sessionId) == sessions.end())
-    {
-      GameState newState;
-      sessions[sessionId] = newState;
-    }
-    return sessions[sessionId];
-};
+inline std::mutex& getSessionMutex() {
+    static std::mutex mtx;
+    return mtx;
+}
 
-GameState G;
+// Thread-safe session controller (Notice the closing brace fix!)
+inline GameState& getOrCreateSession(const std::string& sessionId) {
+    std::lock_guard<std::mutex> lock(getSessionMutex());
+    
+    // Safely look up or instantiate the state inside the map bucket
+    return getSessionMap()[sessionId];
+}
 
 /* ════════════════════════════════════════════════════════════════════════════
    UTILITY FUNCTIONS
@@ -802,11 +803,13 @@ void setupRoutes(httplib::Server& svr){
 
     svr.Get("/state",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        
+        // FIX: Check both casing variants to ensure cross-browser compatibility
         std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
         if(sessionId.empty()) sessionId = "guest_default";
         
         GameState& G = getOrCreateSession(sessionId);
-        // Initialize if it's a completely fresh user session
         if(!G.liveMode && G.slots[0].empty && G.slots[1].empty && G.slots[2].empty && G.slots[3].empty) {
             placeStaticCards(G);
         }
@@ -816,7 +819,10 @@ void setupRoutes(httplib::Server& svr){
 
     svr.Post("/select",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        
+        // FIX: Check both casing variants to ensure cross-browser compatibility
         std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
         if(sessionId.empty()) sessionId = "guest_default";
         
         GameState& G = getOrCreateSession(sessionId);
@@ -827,7 +833,10 @@ void setupRoutes(httplib::Server& svr){
 
     svr.Post("/execute",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        
+        // FIX: Check both casing variants to ensure cross-browser compatibility
         std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
         if(sessionId.empty()) sessionId = "guest_default";
         
         GameState& G = getOrCreateSession(sessionId);
@@ -891,7 +900,10 @@ void setupRoutes(httplib::Server& svr){
 
     svr.Post("/clear",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        
+        // FIX: Check both casing variants to ensure cross-browser compatibility
         std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
         if(sessionId.empty()) sessionId = "guest_default";
         
         GameState& G = getOrCreateSession(sessionId);
@@ -901,7 +913,10 @@ void setupRoutes(httplib::Server& svr){
 
     svr.Post("/step-window",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        
+        // FIX: Check both casing variants to ensure cross-browser compatibility
         std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
         if(sessionId.empty()) sessionId = "guest_default";
         
         GameState& G = getOrCreateSession(sessionId);
@@ -921,7 +936,10 @@ void setupRoutes(httplib::Server& svr){
 
     svr.Post("/start-window",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        
+        // FIX: Check both casing variants to ensure cross-browser compatibility
         std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
         if(sessionId.empty()) sessionId = "guest_default";
         
         GameState& G = getOrCreateSession(sessionId);
