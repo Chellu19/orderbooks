@@ -293,29 +293,47 @@ const std::vector<std::vector<GoodQty>> FILLERS = {
    GAME STATE  — one global instance for single-player
    ════════════════════════════════════════════════════════════════════════════*/
 
-struct GameState {
-    // Scoring
-    int arbPts=0, wins=0, losses=0, tradeCount=0;
+struct GameState
+{
+  // Scoring
+  int arbPts = 0, wins = 0, losses = 0, tradeCount = 0;
 
-    // Progression
-    int  level=0;          // 0-3 = static levels, 4 = boss
-    int  bossSubIdx=0;
-    bool liveMode=false;
+  // Progression
+  int level = 0; // 0-3 = static levels, 4 = boss
+  int bossSubIdx = 0;
+  bool liveMode = false;
 
-    std::vector<TradeRecord> history;
+  std::vector<TradeRecord> history;
 
-    // Board: 8 grid slots + player qty selection per slot
-    std::array<Card,8> slots;
-    std::array<int,8>  qty={};
+  // Board: 8 grid slots + player qty selection per slot
+  std::array<Card, 8> slots;
+  std::array<int, 8> qty = {};
 
-    // Boss: underlying mid prices and window state
-    std::map<std::string,int> liveMids, windowOpenMids;
-    int  currWindowDuration=18;
-    std::vector<ArbResult> lastArbs;
-    int  lastBestPnl=0;
-    bool executedThisWindow=false;
+  // Boss: underlying mid prices and window state
+  std::map<std::string, int> liveMids, windowOpenMids;
+  int currWindowDuration = 18;
+  std::vector<ArbResult> lastArbs;
+  int lastBestPnl = 0;
+  bool executedThisWindow = false;
 
-    GameState() { for(auto& s:slots) s.empty=true; }
+  GameState() { for(auto& s:slots) s.empty=true; }
+};
+#include <mutex>
+#include <unordered_map>
+
+  std::unordered_map<std::string, GameState> sessions;
+  std::mutex sessionMutex;
+
+  // Thread-safe session controller
+  GameState &getOrCreateSession(const std::string &sessionId)
+  {
+    std::lock_guard<std::mutex> lock(sessionMutex);
+    if (sessions.find(sessionId) == sessions.end())
+    {
+      GameState newState;
+      sessions[sessionId] = newState;
+    }
+    return sessions[sessionId];
 };
 
 GameState G;
@@ -366,20 +384,15 @@ std::vector<int> shuffled8(){
    Keep only positive pnl, best direction per pair, sorted desc.
    ════════════════════════════════════════════════════════════════════════════*/
 
-std::vector<ArbResult> findAllArbs(){
+std::vector<ArbResult> findAllArbs(GameState& G){
     std::map<std::string,ArbResult> best;
-    // FIX: loop used ":" instead of ";" as separator → for(int i=0; i<8; i++)
-    //      also inner loop checked G.slots[i].empty instead of G.slots[j].empty
     for(int i=0;i<8;i++){
         if(G.slots[i].empty) continue;
         for(int j=0;j<8;j++){
-            // FIX: was checking G.slots[i].empty (wrong) — should be G.slots[j].empty
             if(i==j||G.slots[j].empty) continue;
             if(goodsKey(G.slots[i].goods)!=goodsKey(G.slots[j].goods)) continue;
             int pnl=G.slots[j].bid-G.slots[i].ask;
             if(pnl<=0) continue;
-            // FIX: std::to_string was nested inside another std::to_string
-            //      WRONG: std::to_string(std::to_string(std::max(i,j)))
             std::string k=std::to_string(std::min(i,j))+"-"+std::to_string(std::max(i,j));
             if(!best.count(k)||pnl>best[k].pnl) best[k]={i,j,pnl};
         }
@@ -399,7 +412,7 @@ std::vector<ArbResult> findAllArbs(){
    5. Random filler cards in empty slots (p=0.125 each)
    ════════════════════════════════════════════════════════════════════════════*/
 
-void placeStaticCards(){
+void placeStaticCards(GameState& G){
     G.qty.fill(0);
     for(auto& s:G.slots) s.empty=true;
 
@@ -410,7 +423,6 @@ void placeStaticCards(){
     std::vector<Card> cards;
     std::vector<int>  qtys;
 
-    // Price buy-side
     for(const auto& side:sc.buys){
         int fair=fairVal(side.goods);
         int mid=std::max(2,(int)std::round(fair*(1.0+randDouble(-0.08,0.08))));
@@ -419,12 +431,10 @@ void placeStaticCards(){
         qtys.push_back(side.qty);
     }
 
-    // Total cost of buy-side
     int totalCost=0;
     for(int i=0;i<(int)cards.size();i++) totalCost+=cards[i].ask*qtys[i];
     int targetRev=totalCost+arb;
 
-    // Distribute targetRev proportionally across sell-side
     int totalSF=0;
     for(const auto& s:sc.sells) totalSF+=fairVal(s.goods)*s.qty;
     if(!totalSF) totalSF=1;
@@ -437,11 +447,9 @@ void placeStaticCards(){
         qtys.push_back(side.qty);
     }
 
-    // Place into random grid positions
     auto pos=shuffled8();
     for(int i=0;i<(int)cards.size();i++) G.slots[pos[i]]=cards[i];
 
-    // Random exotic filler cards in remaining slots
     static const std::vector<std::vector<GoodQty>> EX={
         {{"corn",1}},{{"cocoa",1}},{{"corn",2},{"coffee",1}},
         {{"platinum",1},{"rice",1}},{{"sugar",3}},{{"corn",2},{"cocoa",1}}
@@ -464,7 +472,7 @@ void placeStaticCards(){
    (look realistic but have no partner) with 75%/25% presence chance.
    ════════════════════════════════════════════════════════════════════════════*/
 
-void placeBossCards(){
+void placeBossCards(GameState& G){
     G.qty.fill(0);
     G.executedThisWindow=false;
     for(auto& s:G.slots) s.empty=true;
@@ -478,7 +486,6 @@ void placeBossCards(){
     std::vector<Card> defs;
     std::set<std::string> usedKeys;
 
-    // Best arb pair
     {
         int f=fairVal(bd);
         int sp=std::max(1,(int)std::round(f*0.06));
@@ -489,7 +496,6 @@ void placeBossCards(){
         usedKeys.insert(goodsKey(bd));
     }
 
-    // Secondary arb pair
     {
         int f=fairVal(sd);
         int sp=std::max(1,(int)std::round(f*0.06));
@@ -500,7 +506,6 @@ void placeBossCards(){
         usedKeys.insert(goodsKey(sd));
     }
 
-    // Decoy cards — unique compositions from BOSS_PAIRS pool + cross-sub pools
     std::vector<std::vector<GoodQty>> decoyPool;
     for(const auto& p:pairs){
         if(!usedKeys.count(goodsKey(p))){
@@ -522,11 +527,11 @@ void placeBossCards(){
     int decoyIdx=0;
     for(int i=0;i<4;i++){
         if(randDouble(0,1)<0.25){
-            defs.push_back(Card{});  // 25% blank slot
+            defs.push_back(Card{});
             continue;
         }
         if(decoyIdx>=(int)decoyPool.size()){
-            defs.push_back(Card{});  // ran out of unique compositions
+            defs.push_back(Card{});
             continue;
         }
         const auto& goods=decoyPool[decoyIdx++];
@@ -539,7 +544,7 @@ void placeBossCards(){
     auto pos=shuffled8();
     for(int i=0;i<(int)defs.size();i++) G.slots[pos[i]]=defs[i];
 
-    G.lastArbs    =findAllArbs();
+    G.lastArbs    =findAllArbs(G);
     G.lastBestPnl =G.lastArbs.empty()?0:G.lastArbs[0].pnl;
 }
 
@@ -548,13 +553,12 @@ void placeBossCards(){
    Prices only step BETWEEN windows — frozen during a window.
    ════════════════════════════════════════════════════════════════════════════*/
 
-void initMids(){
+void initMids(GameState& G){
     for(const auto& g:GOODS) G.liveMids[g]=BASE.at(g);
 }
 
-void stepMids(){
+void stepMids(GameState& G){
     for(const auto& g:GOODS){
-        // FIX: was "(! + randDouble(...))" — should be "(1 + randDouble(...))"
         int n=(int)std::round(G.liveMids[g]*(1+randDouble(-0.1,0.1)));
         G.liveMids[g]=clampI(n,(int)std::round(BASE.at(g)*0.5),(int)std::round(BASE.at(g)*2));
     }
@@ -566,7 +570,7 @@ void stepMids(){
    Valid trade requires every good's net == 0.
    ════════════════════════════════════════════════════════════════════════════*/
 
-std::map<std::string,int> computeNet(){
+std::map<std::string,int> computeNet(GameState& G){
     std::map<std::string,int> net;
     for(int i=0;i<8;i++){
         if(G.slots[i].empty||G.qty[i]==0) continue;
@@ -585,17 +589,15 @@ bool isBalanced(const std::map<std::string,int>& net){
    LEVEL-UP CHECK  (called after every executed trade)
    ════════════════════════════════════════════════════════════════════════════*/
 
-std::string checkLevelUp(){
-    // Boss unlock
+std::string checkLevelUp(GameState& G){
     if(!G.liveMode&&G.arbPts>=25&&G.level<4){
         G.level=4; G.liveMode=true;
-        initMids();
+        initMids(G);
         G.windowOpenMids=G.liveMids;
         G.currWindowDuration=BOSS_SUBS[0].window;
-        placeBossCards();
+        placeBossCards(G);
         return "BOSS_UNLOCK";
     }
-    // Static level-up
     if(!G.liveMode){
         for(int l=3;l>=0;l--){
             if(G.level<=l&&G.arbPts>=STATIC_LEVELS[l].next){
@@ -605,13 +607,11 @@ std::string checkLevelUp(){
             }
         }
     }
-    // Boss sub-level upgrade
     if(G.liveMode){
         for(int i=(int)BOSS_SUBS.size()-1;i>G.bossSubIdx;i--){
             if(G.arbPts>=BOSS_SUBS[i].pts){
                 G.bossSubIdx=i;
                 G.currWindowDuration=BOSS_SUBS[i].window;
-                // FIX: had a stray space "BOSS_SUB: " — removed space after colon
                 return "BOSS_SUB:"+BOSS_SUBS[i].name+":"+std::to_string(BOSS_SUBS[i].window);
             }
         }
@@ -643,7 +643,7 @@ int jInt(const std::string& body,const std::string& key){
     return n.empty()?0:std::stoi(n);
 }
 
-std::string slotJson(int i){
+std::string slotJson(const GameState& G, int i){
     const Card& c=G.slots[i];
     if(c.empty) return "{\"empty\":true,\"idx\":"+std::to_string(i)+"}";
     std::string g="[";
@@ -661,7 +661,7 @@ std::string slotJson(int i){
           +",\"title\":"+jStr(cardTitle(c))+"}";
 }
 
-std::string stateJson(){
+std::string stateJson(const GameState& G){
     int tot=G.wins+G.losses;
     int wr=tot?clampI((int)std::round((double)G.wins/tot*100),0,100):0;
 
@@ -690,11 +690,10 @@ std::string stateJson(){
     s+="\"levelName\":"+jStr(lvlName)+",";
     s+="\"levelProg\":"+std::to_string(lvlProg)+",";
     s+="\"levelTarget\":"+std::to_string(lvlTarget)+",";
-    // FIX: was G.currentWindowDuration (undefined) — field is G.currWindowDuration
     s+="\"windowDuration\":"+std::to_string(G.currWindowDuration)+",";
     s+="\"lastBestPnl\":"+std::to_string(G.lastBestPnl)+",";
     s+="\"slots\":[";
-    for(int i=0;i<8;i++){if(i)s+=","; s+=slotJson(i);}
+    for(int i=0;i<8;i++){if(i)s+=","; s+=slotJson(G, i);}
     s+="],";
     s+="\"qty\":[";
     for(int i=0;i<8;i++){if(i)s+=","; s+=std::to_string(G.qty[i]);}
@@ -755,7 +754,7 @@ std::string readFile(const std::string& path){
 void addCors(httplib::Response& res){
     res.set_header("Access-Control-Allow-Origin","*");
     res.set_header("Access-Control-Allow-Methods","GET,POST,OPTIONS");
-    res.set_header("Access-Control-Allow-Headers","Content-Type");
+    res.set_header("Access-Control-Allow-Headers","Content-Type, X-User-Session");
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -772,67 +771,75 @@ void setupRoutes(httplib::Server& svr){
         res.set_content(html,"text/html");
     });
 
-  svr.Get("/images/(.*)", [](const httplib::Request& req, httplib::Response& res) {
-      addCors(res);
-
-      std::string filename = req.matches[1];
-
-      // Block directory traversal
-      if(filename.find("..") != std::string::npos){
-          res.status = 403;
-          res.set_content("Forbidden", "text/plain");
-          return;
-      }
-
-      std::string path = "images/" + filename;
-      std::ifstream f(path, std::ios::binary);
-      if(!f){
-          res.status = 404;
-          res.set_content("Not found: " + path, "text/plain");
-          return;
-      }
-
-      std::string data((std::istreambuf_iterator<char>(f)),
-                        std::istreambuf_iterator<char>());
-
-      // Get extension from last dot
-      std::string ctype = "image/png"; // default
-      auto dot = filename.rfind('.');
-      if(dot != std::string::npos){
-          std::string ext = filename.substr(dot); // includes the dot e.g. ".svg"
-          if(ext == ".svg")             ctype = "image/svg+xml";
-          else if(ext == ".png")        ctype = "image/png";
-          else if(ext == ".jpg"
-              || ext == ".jpeg")       ctype = "image/jpeg";
-          else if(ext == ".webp")       ctype = "image/webp";
-          else if(ext == ".gif")        ctype = "image/gif";
-      }
-
-      res.set_content(data, ctype);
-  });
-
-    svr.Get("/state",[](const httplib::Request&,httplib::Response& res){
+    svr.Get("/images/(.*)", [](const httplib::Request& req, httplib::Response& res) {
         addCors(res);
-        res.set_content(stateJson(),"application/json");
+        std::string filename = req.matches[1];
+        if(filename.find("..") != std::string::npos){
+            res.status = 403;
+            res.set_content("Forbidden", "text/plain");
+            return;
+        }
+        std::string path = "images/" + filename;
+        std::ifstream f(path, std::ios::binary);
+        if(!f){
+            res.status = 404;
+            res.set_content("Not found: " + path, "text/plain");
+            return;
+        }
+        std::string data((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+        std::string ctype = "image/png";
+        auto dot = filename.rfind('.');
+        if(dot != std::string::npos){
+            std::string ext = filename.substr(dot);
+            if(ext == ".svg")             ctype = "image/svg+xml";
+            else if(ext == ".png")        ctype = "image/png";
+            else if(ext == ".jpg"|| ext == ".jpeg") ctype = "image/jpeg";
+            else if(ext == ".webp")       ctype = "image/webp";
+            else if(ext == ".gif")        ctype = "image/gif";
+        }
+        res.set_content(data, ctype);
+    });
+
+    svr.Get("/state",[](const httplib::Request& req,httplib::Response& res){
+        addCors(res);
+        std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = "guest_default";
+        
+        GameState& G = getOrCreateSession(sessionId);
+        // Initialize if it's a completely fresh user session
+        if(!G.liveMode && G.slots[0].empty && G.slots[1].empty && G.slots[2].empty && G.slots[3].empty) {
+            placeStaticCards(G);
+        }
+        
+        res.set_content(stateJson(G),"application/json");
     });
 
     svr.Post("/select",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = "guest_default";
+        
+        GameState& G = getOrCreateSession(sessionId);
         int idx=jInt(req.body,"idx"), delta=jInt(req.body,"delta");
         if(idx>=0&&idx<8&&!G.slots[idx].empty) G.qty[idx]+=delta;
-        res.set_content(stateJson(),"application/json");
+        res.set_content(stateJson(G),"application/json");
     });
 
-    svr.Post("/execute",[](const httplib::Request&,httplib::Response& res){
+    svr.Post("/execute",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = "guest_default";
+        
+        GameState& G = getOrCreateSession(sessionId);
+        
         bool any=false; for(int q:G.qty) if(q){any=true;break;}
         if(!any){
-            res.set_content("{\"error\":\"Nothing selected\",\"state\":"+stateJson()+"}","application/json");
+            res.set_content("{\"error\":\"Nothing selected\",\"state\":"+stateJson(G)+"}","application/json");
             return;
         }
-        auto net=computeNet();
+        auto net=computeNet(G);
         if(!isBalanced(net)){
-            res.set_content("{\"error\":\"Not balanced\",\"state\":"+stateJson()+"}","application/json");
+            res.set_content("{\"error\":\"Not balanced\",\"state\":"+stateJson(G)+"}","application/json");
             return;
         }
 
@@ -871,26 +878,34 @@ void setupRoutes(httplib::Server& svr){
         G.arbPts+=pts; G.tradeCount++;
         G.history.insert(G.history.begin(),{G.tradeCount,pnl,pts,desc});
 
-        std::string extra=checkLevelUp();
-        if(!G.liveMode){ G.qty.fill(0); placeStaticCards(); }
+        std::string extra=checkLevelUp(G);
+        if(!G.liveMode){ G.qty.fill(0); placeStaticCards(G); }
         else            { G.qty.fill(0); }
 
         res.set_content(
             "{\"msg\":"+jStr(msg)+",\"msgType\":"+jStr(mtype)
             +",\"pts\":"+std::to_string(pts)+",\"pnl\":"+std::to_string(pnl)
-            +",\"extra\":"+jStr(extra)+",\"state\":"+stateJson()+"}",
+            +",\"extra\":"+jStr(extra)+",\"state\":"+stateJson(G)+"}",
             "application/json");
     });
 
-    svr.Post("/clear",[](const httplib::Request&,httplib::Response& res){
+    svr.Post("/clear",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = "guest_default";
+        
+        GameState& G = getOrCreateSession(sessionId);
         G.qty.fill(0);
-        res.set_content(stateJson(),"application/json");
+        res.set_content(stateJson(G),"application/json");
     });
 
-    svr.Post("/step-window",[](const httplib::Request&,httplib::Response& res){
+    svr.Post("/step-window",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
-        stepMids();
+        std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = "guest_default";
+        
+        GameState& G = getOrCreateSession(sessionId);
+        stepMids(G);
         std::string msg,mtype;
         if(!G.executedThisWindow){
             bool sel=false; for(int q:G.qty) if(q){sel=true;break;}
@@ -900,17 +915,20 @@ void setupRoutes(httplib::Server& svr){
         } else { msg="Window closed - repricing."; mtype="info"; }
         G.qty.fill(0);
         res.set_content(
-            "{\"msg\":"+jStr(msg)+",\"msgType\":"+jStr(mtype)+",\"state\":"+stateJson()+"}",
+            "{\"msg\":"+jStr(msg)+",\"msgType\":"+jStr(mtype)+",\"state\":"+stateJson(G)+"}",
             "application/json");
     });
 
-    svr.Post("/start-window",[](const httplib::Request&,httplib::Response& res){
+    svr.Post("/start-window",[](const httplib::Request& req,httplib::Response& res){
         addCors(res);
+        std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = "guest_default";
+        
+        GameState& G = getOrCreateSession(sessionId);
         G.windowOpenMids=G.liveMids;
-        // FIX: was G.currentWindowDuration (undefined) — field is G.currWindowDuration
         G.currWindowDuration=BOSS_SUBS[G.bossSubIdx].window;
-        placeBossCards();
-        res.set_content(stateJson(),"application/json");
+        placeBossCards(G);
+        res.set_content(stateJson(G),"application/json");
     });
 }
 
@@ -921,17 +939,12 @@ void setupRoutes(httplib::Server& svr){
 int main(){
     httplib::Server svr;
     setupRoutes(svr);
-    placeStaticCards();
     
-    // ─── ADDED CODES FOR CLOUD COMPLIANCE START ───
+    // Render dynamic environment port allocation
     const char* port_env = std::getenv("PORT");
     int port = port_env ? std::stoi(port_env) : 8080;
     
-    std::cout << "Arb game -> http://localhost:" << port << "\n";
-    
-    // Pass the dynamic port variable here instead of the hardcoded 8080
-    svr.listen("0.0.0.0", port); 
-    // ─── ADDED CODES FOR CLOUD COMPLIANCE END ───
-
+    std::cout << "Multiplayer Arb server listening on port: " << port << "\n";
+    svr.listen("0.0.0.0", port);
     return 0;
 }
