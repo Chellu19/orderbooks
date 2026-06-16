@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Find the Arb</title>
+<link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Bitcount+Prop+Single&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&family=Oxanium:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/*
+ * ─────────────────────────────────────────────────────────────
+ * FUTURISTIC CYBER-QUANT THEME
+ * ─────────────────────────────────────────────────────────────
+ */
+:root {
+  --bg:       #0a0b10;        /* Deep space cyber black */
+  --card-bg:  #121420;        /* Sleek terminal card tint */
+  --panel-bg: #1a1d30;        /* Glowing panel background */
+  --border:   #2a2f4a;        /* Subdued tech grid line */
+  --text:     #e2e8f0;        /* Crisp neon white/light grey */
+  --muted:    #64748b;        /* Ghostly data slate grey */
+  
+  /* Primary Action Colors (Neon Glow Profiles) */
+  --green:    #00ffb3;        /* Matrix Neon Teal/Cyan */
+  --green-lt: rgba(0, 255, 179, 0.15);
+  --green-dk: #004d36;
+  
+  --red:      #f95260;        /* Valorant/Cyberpunk Neon Red */
+  --red-lt:   rgba(255, 70, 85, 0.15);
+  --red-dk:   #5c131a;
+  
+  --blue-lt:  rgba(0, 229, 255, 0.15);
+  --blue-dk:  #00425a;
+  
+  --amber-lt: rgba(255, 186, 0, 0.15);
+  --amber-dk: #5c4300;
+  
+  --lime-lt:  rgba(174, 255, 0, 0.15);
+  --lime-dk:  #3b5c00;
+  
+  --radius-sm: 4px;           /* Sharper angles look more futuristic */
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+#home-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  text-align: center;
+}
+#game-screen {
+  display: none; /* Hidden by default until routed */
+}
+
+/* Master Menu Canvas Title */
+.title-container h1 {
+  font-family: 'Oxanium', sans-serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  background: linear-gradient(180deg, #ff2a74 0%, var(--muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 72px rgba(255, 42, 116, 0.6);
+}
+
+/* Big Menu Buttons */
+.menu-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 320px;
+}
+.menu-launch-btn {
+  font-family: 'Oxanium', sans-serif;
+  background: transparent;
+  color: var(--green);
+  border: 2px solid var(--green);
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 0 15px var(--green-lt);
+  transition: all 0.2s ease-in-out;
+}
+.menu-launch-btn:hover {
+  background: var(--green);
+  color: #000;
+  box-shadow: 0 0 25px var(--green);
+}
+.menu-launch-btn.guide-btn:hover {
+  background: rgba(57, 248, 255, 0.1) !important; /* Subtle transparent teal fill */
+  color: #fff !important;                         /* Changes text to crisp white on hover */
+  border-color: #39f8ff !important;               /* Keeps the sharp teal border color */
+  box-shadow: 0 0 25px rgba(57, 248, 255, 0.4) !important; /* Glowing aura match */
+}
+
+/* Floating Bottom-Left Utility Target */
+.floating-help-icon {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 99;
+  
+  /* Force a strict, perfectly uniform interactive footprint */
+  width: 36px !important;
+  height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  object-fit: contain;
+  
+  cursor: pointer;
+  opacity: 0.6;
+  filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0));
+  transition: all 0.2s ease-in-out;
+}
+
+/* Brightens and adds a subtle cyber neon aura when hovered */
+.floating-help-icon:hover {
+  opacity: 1;
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 8px var(--green));
+}
+
+/* The Modal Backdrop Matrix */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(10, 11, 16, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 999;
+  justify-content: center;
+  align-items: center;
+}
+.modal-overlay.active { display: flex; }
+
+.modal-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 500px;
+  padding: 1.5rem;
+  position: relative;
+  box-shadow: 0 0 40px rgba(0,0,0,0.8);
+}
+.modal-close-x {
+  position: absolute;
+  top: 15px; right: 15px;
+  background: transparent; border: none;
+  color: var(--muted); font-size: 18px; cursor: pointer;
+}
+.modal-close-x:hover { color: var(--red); }
+
+/* Interactive Graphic Window Block Inside Modal */
+.guide-image-btn {
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  margin: 15px 0;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.guide-image-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.01);
+  border-color: var(--green);
+}
+
+body {
+  font-family: 'Bitcount Prop Single', monospace;
+  background: radial-gradient(circle at 50% 15%, #1d223f 0%, #0a0b10 75%);
+  background-attachment: fixed; /* Keeps the gradient pinned when scrolling */
+  color: var(--text);
+  padding: 1.25rem;
+  max-width: 820px;
+  margin: 0 auto;
+  letter-spacing: 0.03em;
+}
+
+/* ── HUD ──────────────────────────────────────────────────── */
+.hud{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.hud-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: .6rem .9rem;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+.hud-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em}
+.hud-val {
+  font-family: 'Syncopate', sans-serif; /* High-tech display font */
+  font-size: 22px;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(255,255,255,0.1);
+}
+.hud-val.pos{color:var(--green);text-shadow: 0 0 10px rgba(0,255,179,0.4);}
+.hud-val.neg{color:var(--red);text-shadow: 0 0 10px rgba(255,70,85,0.4);}
+
+/* ── Level bar ────────────────────────────────────────────── */
+.level-bar {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: .5rem 1rem; margin-bottom: .85rem;
+  display: flex; align-items: center; gap: 12px;
+}
+.level-label{font-size:11px;color:var(--muted);text-transform:uppercase}
+.level-track{flex:1;height:4px;background:var(--border);border-radius:999px;overflow:hidden}
+.level-fill {
+  height: 100%; 
+  background: linear-gradient(90deg, var(--green-dk), var(--green));
+  box-shadow: 0 0 8px var(--green);
+  border-radius: 999px; transition: width .3s;
+}
+.level-name{font-family: 'Syncopate', sans-serif; font-size:11px; font-weight:500; color: #fff}
+
+/* ── Live bar (shark mode) ────────────────────────────────── */
+.live-bar {
+  background: var(--amber-lt);
+  border: 1px solid rgba(255, 186, 0, 0.4);
+  border-radius: var(--radius-md);
+  padding: .5rem 1rem; margin-bottom: .85rem;
+  display: none; align-items: center; gap: 10px;
+  font-size: 13px; color: #ffca36;
+}
+.live-bar.show{display:flex}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow: 0 0 10px var(--red);flex-shrink:0;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(0.9)}}
+.live-label{flex:1; font-family: 'Syncopate', sans-serif; font-size: 11px; letter-spacing: 0.05em;}
+.countdown{font-family: 'Syncopate', sans-serif; font-size:20px; font-weight:700; min-width:26px; text-align:right; color: #ffca36}
+.countdown.urgent{color:var(--red); text-shadow: 0 0 10px var(--red);}
+
+/* ── Ticker ───────────────────────────────────────────────── */
+.ticker-row{display:none;gap:8px;flex-wrap:wrap;margin-bottom:.85rem}
+.ticker-row.show{display:flex}
+.ticker-chip {
+  font-size: 12px; background: var(--card-bg); border: 1px solid var(--border); 
+  border-radius: var(--radius-sm); padding: 4px 10px; color: var(--muted); transition: all .3s
+}
+.ticker-chip span{font-weight:700;color:var(--text)}
+.ticker-chip.flash-up{background:var(--green-lt); border-color: var(--green); color: var(--green)}
+.ticker-chip.flash-up span{color:#fff}
+.ticker-chip.flash-down{background:var(--red-lt); border-color: var(--red); color: var(--red)}
+.ticker-chip.flash-down span{color:#fff}
+
+/* ── Reveal panel ─────────────────────────────────────────── */
+.reveal-panel {
+  display: none; background: #0e101f; border: 1px dashed var(--border);
+  border-radius: var(--radius-lg); padding: .85rem 1rem; margin-bottom: .85rem; font-size: 12px; color: var(--muted)
+}
+.reveal-panel.show{display:block}
+.reveal-title{font-family: 'Syncopate', sans-serif; font-size:12px; color:#fff; margin-bottom:6px; text-transform:uppercase}
+.reveal-row{padding:3px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reveal-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap;text-transform:uppercase}
+.badge-best{background:var(--green);color:#000}
+.badge-other{background:var(--blue-dk);color:#fff;border:1px solid #00e5ff}
+
+/* ── Toast ────────────────────────────────────────────────── */
+.toast {
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin-top: 0.5rem;
+  margin-bottom: 1.25rem;
+  min-height: 40px;            /* Reserves the layout space so things don't jump around */
+  display: flex;               /* Keep layout alignment stable */
+  align-items: center;
+  
+  /* Default Idle State (Empty Log) */
+  background: rgba(26, 29, 48, 0.3);
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-left: 4px solid var(--border);
+}
+
+/* Structural changes when active states are fed from the backend */
+.toast.good  { background: var(--green-lt); color: #fff; border: 1px solid var(--green); border-left: 4px solid var(--green); }
+.toast.great { background: var(--lime-lt);  color: #fff; border: 1px solid #aeff00;  border-left: 4px solid #aeff00; }
+.toast.bad   { background: var(--red-lt);   color: #fff; border: 1px solid var(--red);   border-left: 4px solid var(--red); }
+.toast.info  { background: var(--blue-lt);  color: #fff; border: 1px solid #00e5ff;  border-left: 4px solid #00e5ff; }
+.toast.warn  { background: var(--amber-lt); color: #fff; border: 1px solid #ffca36;  border-left: 4px solid #ffca36; }
+/* ── 4×2 grid ─────────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem}
+
+/* ── Market card ──────────────────────────────────────────── */
+.mcard {
+  background: var(--card-bg); 
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); 
+  padding: .75rem .65rem;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.mcard:hover {
+  border-color: rgba(100, 116, 139, 0.5);
+}
+.mcard.best-hi{border:1.5px solid var(--green);background:var(--green-lt);box-shadow: 0 0 15px rgba(0,255,179,0.2)}
+.mcard.other-hi{border:1.5px solid #00e5ff;background:var(--blue-lt);box-shadow: 0 0 15px rgba(0,229,255,0.2)}
+.card-name {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 10px; font-weight: 500; color: var(--muted); text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.art-area {
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  flex-wrap: wrap; 
+  gap: 6px; 
+  min-height: 90px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 6px;                  /* Prevents images from touching the card borders */
+}
+
+/* Force every single image inside the asset container to respect the exact same footprint */
+.art-area img {
+  width: 40px !important;
+  height: 40px !important;
+  max-width: 40px !important;
+  max-height: 40px !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
+}
+
+/* Quantity blob */
+.blob{display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:13px;font-weight:700;height:24px}
+.blob.zero{background:rgba(255,255,255,0.05);color:var(--muted)}
+.blob.buy{background:var(--green-dk);color:var(--green);border: 1px solid var(--green)}
+.blob.sell{background:var(--red-dk);color:var(--red);border: 1px solid var(--red)}
+
+/* Buy/Sell buttons */
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.btn-buy {
+  background: transparent; border: 1px solid var(--green); border-radius: var(--radius-sm);
+  color: var(--green); font-family: 'Bitcount Prop Single', monospace; font-size: 14px; font-weight: 700; 
+  padding: 6px 2px; cursor: pointer; line-height: 1.3; transition: all 0.15s;
+}
+.btn-buy:hover{background: var(--green); color: #000; box-shadow: 0 0 10px var(--green-lt)}
+.btn-buy:active{opacity:.8}
+
+.btn-sell {
+  background: transparent; border: 1px solid var(--red); border-radius: var(--radius-sm);
+  color: var(--red); font-family: 'Bitcount Prop Single', monospace; font-size: 14px; font-weight: 700; 
+  padding: 6px 2px; cursor: pointer; line-height: 1.3; transition: all 0.15s;
+}
+.btn-sell:hover{background: var(--red); color: #000; box-shadow: 0 0 10px var(--red-lt)}
+.btn-sell:active{opacity:.8}
+
+/* End-of-window flash styling overrides */
+.btn-end-up{background:var(--green)!important; color: #000 !important}
+.btn-end-down{background:var(--red)!important; color: #000 !important}
+
+/* Empty slot */
+.card-ph{border-radius:var(--radius-lg);min-height:210px;background:var(--panel-bg);border: 1px dashed var(--border);opacity:.15}
+
+/* ── Execute bar ──────────────────────────────────────────── */
+.exec-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:.75rem}
+.exec-btn {
+  background: var(--green); color: #000; border: none; border-radius: var(--radius-md);
+  padding: 9px 22px; font-family: 'Syncopate', sans-serif; font-size: 13px; font-weight: 700; 
+  cursor: pointer; box-shadow: 0 0 15px rgba(0,255,179,0.3); transition: all 0.2s;
+  text-transform: uppercase;
+}
+.exec-btn:hover{box-shadow: 0 0 25px rgba(0,255,179,0.6); transform: translateY(-1px)}
+.exec-btn:active{transform: translateY(0); opacity: 0.85}
+
+.clear-btn {
+  background: rgba(0, 255, 179, 0.5); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 9px 14px; font-size: 16px; cursor: pointer; color: var(--muted); transition: all 0.2s; font-family: 'Bitcount Prop Single';
+}
+.clear-btn:hover {
+  background: rgba(0, 255, 179, 0.75); /* Subtle transparent teal tint */
+  color: #00ffb3;                    /* Neon Teal text */
+  border-color: #00ffb3;             /* Neon Teal glowing border */
+  box-shadow: 0 0 15px rgba(0, 255, 179, 0.3); /* Teal ambient backlight aura */
+  transform: translateY(-1px);
+}
+
+/* Balance panel */
+.balance-panel{font-size:12px;color:var(--muted);flex:1;line-height:1.8}
+.good-line{display:inline-block;margin-right:10px;background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px;}
+.good-line.ok{color:var(--green); border: 1px solid var(--green-lt)}
+.good-line.off{color:var(--red); border: 1px solid var(--red-lt)}
+.pnl-line{font-size:13px;margin-top:4px; font-family: 'Syncopate', sans-serif;}
+
+/* ── History ──────────────────────────────────────────────── */
+#history {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  max-height: 180px;            /* Forces scrollbar after ~4-5 trades */
+  overflow-y: auto;             /* Enables vertical scrolling */
+}
+
+/* Custom sleek scrollbar for modern browsers */
+#history::-webkit-scrollbar {
+  width: 6px;
+}
+#history::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.1);
+}
+#history::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.hist-label {
+  font-family: 'Syncopate', sans-serif; 
+  font-size: 11px; 
+  font-weight: 700; 
+  color: var(--muted); 
+  text-transform: uppercase; 
+  letter-spacing: .08em; 
+  margin-bottom: 10px;
+  position: sticky;             /* Keeps the label fixed at the top while scrolling */
+  top: 0;
+  background: #0a0b10;          /* Matches your background gradient depth */
+}
+
+.hist-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(42, 47, 74, 0.5);
+  color: var(--text);
+}
+.hist-item:last-child { border-bottom: none; }
+.hist-pts { font-family: 'Syncopate', sans-serif; font-weight: 700; }
+.hist-pts.pos { color: var(--green); }
+.hist-pts.neg { color: var(--red); }
+
+.bg-watermark-icon {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px; height: 400px;
+  background: url('/images/coin-icon.svg') no-repeat center;
+  background-size: contain;
+  opacity: 0.03; /* Kept ultra-low so it's a ghostly background element */
+  z-index: -1;   /* Keeps it firmly behind your text and buttons */
+  pointer-events: none;
+}
+.logo-sub-badge {
+  display: flex;
+  justify-content: center;
+  margin-top: -1rem;
+  margin-bottom: 2rem;
+}
+.logo-sub-badge img {
+  width: 48px;
+  height: 48px;
+  opacity: 1;
+  /* Give the icon the same colored aura as your buttons */
+  filter: drop-shadow(0 0 8px var(--green)); 
+}
+</style>
+</head>
+<body>
+
+<div id="home-screen">
+    <div class="bg-watermark-icon"></div>
+  <div class="title-container">
+  <h1>Orderbooks</h1>
+</div>
+  <div class="menu-btn-group">
+    <button class="menu-launch-btn" onclick="routeToScreen('game')">Initialize Terminal</button>
+    <button class="menu-launch-btn guide-btn" style="color: #39f8ff; border-color: #39f8ff; box-shadow: 0 0 15px rgba(57, 248, 255, 0.15);" onclick="toggleModal(true)">Operations Guide</button>
+  </div>
+</div>
+
+<div id="game-screen">
+  <div class="hud">
+    <div class="hud-card">
+      <div class="hud-label">Arb points</div>
+      <div class="hud-val" id="h-pts">0 <span style="font-size:13px;color:var(--muted)">pts</span></div>
+    </div>
+    <div class="hud-card"><div class="hud-label">Trades</div><div class="hud-val" id="h-trades">0</div></div>
+    <div class="hud-card"><div class="hud-label">Win rate</div><div class="hud-val" id="h-wr">—</div></div>
+  </div>
+
+  <div class="level-bar">
+    <span class="level-label">Level</span>
+    <div class="level-track"><div class="level-fill" id="lvl-fill" style="width:0%"></div></div>
+    <span class="level-name" id="lvl-name">Beginner → 3 pts</span>
+  </div>
+
+  <div class="live-bar" id="live-bar">
+    <div class="live-dot"></div>
+    <span class="live-label" id="live-label">Shark I · live market</span>
+    <span class="countdown" id="countdown">—</span>
+    <span style="font-size:12px;color:var(--amber-dk)">s</span>
+  </div>
+
+  <div class="ticker-row" id="ticker-row"></div>
+  <div class="reveal-panel" id="reveal-panel"></div>
+
+  <div class="grid" id="cards-grid"></div>
+
+  <div class="exec-bar">
+    <button class="exec-btn" onclick="executeTrade()">Execute</button>
+    <button class="clear-btn" onclick="clearTrade()">Clear</button>
+    <div class="balance-panel" id="balance-panel">Transmission lines idle. Secure a net-zero execution loop.</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div id="history"></div>
+  
+  <img src="/images/help-icon.svg" class="floating-help-icon" alt="Help Manual" onclick="toggleModal(true)">
+</div>
+
+<div class="modal-overlay" id="guide-modal" onclick="if(event.target === this) toggleModal(false)">
+  <div class="modal-box">
+    <button class="modal-close-x" onclick="toggleModal(false)">✕</button>
+    <h3 class="reveal-title" style="font-size: 15px; margin-bottom: 14px; color: var(--green);">SYSTEM LOG: MANUAL DIRECTIVES</h3>
+    
+    <ul style="font-size: 16px; line-height: 1.7; color: var(--text); padding-left: 18px; margin-bottom: 15px;">
+      <li style="margin-bottom: 8px;"><strong>Matrix Analysis:</strong> Inspect the active cards in the 4×2 grid workspace. Each card presents unique bid/ask quotes and bundle volumes.</li>
+      <li style="margin-bottom: 8px;"><strong>Balanced Accounting:</strong> Select pairings to buy or sell. Every transaction updates your execution queue metrics.</li>
+      <li style="margin-bottom: 8px;"><strong>Net-Zero Mandate:</strong> You cannot transmit trades blindly. All asset inputs must cancel each other out completely so the net residual total reads exactly zero.</li>
+      <li style="margin-bottom: 8px;"><strong>Calculated Yield:</strong> The real-time profit dashboard is locked during preparation. You must calculate the exact price yield mentally before hitting execute.</li>
+    </ul>
+
+    <button class="clear-btn" style="width: 100%; color: rgb(4, 0, 45); border-color: var(--border);" onclick="toggleModal(false)">Acknowledge Rules</button>
+  </div>
+</div>
+
+<script>
+/*
+ * ─────────────────────────────────────────────────────────────────────────
+ *  FRONTEND JAVASCRIPT
+ *
+ *  All game logic lives in the C++ backend.
+ *  This file is purely a render layer:
+ *    1. Fetches state from the server via REST calls
+ *    2. Renders the state to DOM
+ *    3. Manages the client-side countdown timer
+ *    4. Draws canvas icons for goods
+ *  No scoring, pricing, or arb detection happens here.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+
+const API = '';  // empty = same origin; change to 'http://your-server' if separate
+
+function routeToScreen(screenTarget) {
+  const home = document.getElementById('home-screen');
+  const game = document.getElementById('game-screen');
+  
+  if (screenTarget === 'game') {
+    home.style.display = 'none';
+    game.style.display = 'block';
+  } else {
+    home.style.display = 'flex';
+    game.style.display = 'none';
+  }
+}
+
+// ── Modal Toggle Control ──────────────────────────────────────────────────
+function toggleModal(shouldOpen) {
+  const modal = document.getElementById('guide-modal');
+  if (shouldOpen) {
+    modal.classList.add('active');
+  } else {
+    modal.classList.remove('active');
+  }
+}
+
+// ── Action Triggered via Image Click ─────────────────────────────────────
+function handleImageAction() {
+  showToast("DIAGNOSTIC: Operations blueprint loop checked.", "info");
+  toggleModal(false); // Closes the window after interacting with the button image
+}
+
+function makeIcon(good, size = 64) {
+    const img = document.createElement('img');
+    img.src    = `/images/${good}.svg`;
+    img.width  = size;
+    img.height = size;
+    img.alt    = good;
+
+    // Inline style so multiple icons stack horizontally in the art-area flex container
+    img.style.width      = size + 'px';
+    img.style.height     = size + 'px';
+    img.style.objectFit  = 'contain';
+    img.style.flexShrink = '0';
+
+    return img;
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  return r.json();
+}
+const GET  = path       => api('GET',  path);
+const POST = (path, b)  => api('POST', path, b || {});
+
+// ── Shark countdown timer ─────────────────────────────────────────────────
+let countdownTimer = null;
+let timeLeft = 0;
+let liveMode = false;
+let lastArbs = [];    // stored for reveal highlighting
+let lastBestPnl = 0;
+
+function startCountdown(duration) {
+  clearInterval(countdownTimer);
+  timeLeft = duration;
+  const cd = document.getElementById('countdown');
+  cd.textContent = timeLeft;
+  cd.className   = 'countdown ' + (timeLeft <= 8 ? 'urgent' : '');
+
+  countdownTimer = setInterval(async () => {
+    timeLeft--;
+    cd.textContent = timeLeft;
+    cd.className   = 'countdown ' + (timeLeft <= 8 ? 'urgent' : '');
+
+    if(timeLeft <= 0) {
+      clearInterval(countdownTimer);
+
+      // Tell backend the window expired: step mids, penalise if needed
+      const r = await POST('/step-window');
+      showToast(r.msg, r.msgType);
+      renderState(r.state);
+      flashWindowEnd(r.state);
+
+      // After flash, wait then start new window
+      setTimeout(async () => {
+        const r2 = await POST('/start-window');
+        renderState(r2);
+        startCountdown(r2.windowDuration);
+        document.getElementById('reveal-panel').classList.remove('show');
+      }, 3500);
+    }
+  }, 1000);
+}
+
+function renderGoods(goods, container) {
+    container.innerHTML = '';
+    goods.forEach(({ good, qty: gq }) => {
+        for (let i = 0; i < gq; i++) container.appendChild(makeIcon(good, 28));
+    });
+}
+
+let localTradeHistory = [];
+// ── Render: full state from backend ──────────────────────────────────────
+function renderState(st) {
+  if(!st) return;
+  liveMode    = st.liveMode;
+  lastArbs    = st.lastArbs    || [];
+  lastBestPnl = st.lastBestPnl || 0;
+
+  // HUD
+  const pe = document.getElementById('h-pts');
+  pe.innerHTML  = st.arbPts + ' <span style="font-size:13px;color:var(--muted)">pts</span>';
+  pe.className  = 'hud-val' + (st.arbPts > 0 ? ' pos' : st.arbPts < 0 ? ' neg' : '');
+  document.getElementById('h-trades').textContent = st.tradeCount;
+  document.getElementById('h-wr').textContent     = st.winRate !== undefined
+                                                   ? (st.tradeCount ? st.winRate + '%' : '—') : '—';
+
+  // Level bar
+  document.getElementById('lvl-fill').style.width = st.levelProg + '%';
+  document.getElementById('lvl-name').textContent  = st.liveMode
+    ? st.levelName
+    : (st.levelName + ' → ' + st.levelTarget + ' pts');
+
+  // Live bar & ticker
+  const lb = document.getElementById('live-bar');
+  const tr = document.getElementById('ticker-row');
+  if(st.liveMode) {
+    lb.classList.add('show');
+    tr.classList.add('show');
+    document.getElementById('live-label').textContent = st.levelName + ' · live market';
+    renderTicker(st.liveMids);
+  } else {
+    lb.classList.remove('show');
+    tr.classList.remove('show');
+  }
+
+  // Cards
+  renderCards(st.slots, st.qty, st.liveMode);
+
+  // Balance panel
+  renderBalance(st);
+
+  // Reveal panel
+  renderReveal(st.lastArbs);
+
+  // History
+  if (st.history && st.history.length > 0) {
+    st.history.forEach(backendTrade => {
+        // Only push if we haven't logged this unique trade ID yet
+        if (!localTradeHistory.some(t => t.id === backendTrade.id)) {
+            localTradeHistory.unshift(backendTrade); // Put newest at the top
+        }
+    });
+}
+renderHistory(localTradeHistory);
+}
+
+// ── Render: 4×2 card grid ────────────────────────────────────────────────
+function renderCards(slots, qty, live) {
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+
+  for(let i = 0; i < 8; i++) {
+    const s = slots[i];
+
+    if(!s || s.empty) {
+      const ph = document.createElement('div');
+      ph.className = 'card-ph';
+      grid.appendChild(ph);
+      continue;
+    }
+
+    const div = document.createElement('div');
+    div.className = 'mcard'; div.id = 'mcard-' + i;
+
+    // Title
+    const nm = document.createElement('div');
+    nm.className = 'card-name'; nm.title = s.title; nm.textContent = s.title;
+    div.appendChild(nm);
+
+    // Art: one icon per unit of each good
+    const art = document.createElement('div'); art.className = 'art-area';
+    (s.goods||[]).forEach(({good, qty: gq}) => {
+      for(let k = 0; k < gq; k++) art.appendChild(makeIcon(good, 40));
+    });
+    div.appendChild(art);
+
+    // Blob: quantity indicator (+N buy / -N sell / — neutral)
+    const blob = document.createElement('div');
+    blob.id = 'blob-' + i;
+    const q = qty[i] || 0;
+    blob.className  = 'blob ' + (q === 0 ? 'zero' : q > 0 ? 'buy' : 'sell');
+    blob.textContent = q === 0 ? '—' : q > 0 ? '+' + q : '' + q;
+    div.appendChild(blob);
+
+    // Buy/Sell buttons
+    const br = document.createElement('div'); br.className = 'btn-row';
+
+    const bb = document.createElement('button');
+    bb.className = 'btn-buy'; bb.id = 'buybtn-' + i;
+    bb.innerHTML = `Buy<br>$${s.ask}`;
+    bb.onclick = () => selectCard(i, 1);
+
+    const bs = document.createElement('button');
+    bs.className = 'btn-sell'; bs.id = 'sellbtn-' + i;
+    bs.innerHTML = `Sell<br>$${s.bid}`;
+    bs.onclick = () => selectCard(i, -1);
+
+    br.appendChild(bb); br.appendChild(bs); div.appendChild(br);
+    grid.appendChild(div);
+  }
+}
+
+// ── Render: balance panel ─────────────────────────────────────────────────
+// Shows live goods net as the player clicks. Green = balanced, red = not.
+function renderBalance(st) {
+  const panel = document.getElementById('balance-panel');
+  const qty   = st.qty || [];
+  const slots = st.slots || [];
+
+  // Compute net client-side for structural validation
+  const net = {};
+  for(let i = 0; i < 8; i++) {
+    if(!slots[i] || slots[i].empty || !qty[i]) continue;
+    (slots[i].goods||[]).forEach(({good, qty: gq}) => {
+      net[good] = (net[good]||0) + qty[i]*gq;
+    });
+  }
+
+  const anyTrade = qty.some(q => q !== 0);
+  if(!anyTrade) { 
+    panel.innerHTML = 'Transmission lines idle. Secure a net-zero execution loop.'; 
+    return; 
+  }
+
+  const balanced = Object.keys(net).length > 0 && Object.values(net).every(v => v === 0);
+  let html = '<div>';
+  Object.keys(net).forEach(g => {
+    const v = net[g];
+    html += `<span class="good-line ${v===0?'ok':'off'}">${g.charAt(0).toUpperCase()+g.slice(1)}: ${v>0?'+':''}${v}</span>`;
+  });
+  html += '</div>';
+
+  if(balanced) {
+    // Sharp check validation without displaying structural P&L metrics
+    html += `<div class="pnl-line" style="color:var(--green); font-weight:500; text-transform: uppercase; letter-spacing: 0.05em;">✓ Market Matrix Balanced — Ready to Execute</div>`;
+  } else {
+    html += `<div class="pnl-line" style="color:var(--red); text-transform: uppercase; letter-spacing: 0.05em;">⚠️ Unbalanced Exposure. Matrix mismatch.</div>`;
+  }
+  panel.innerHTML = html;
+}
+
+// ── Render: reveal panel (shark only) ────────────────────────────────────
+function renderReveal(arbs) {
+  const panel = document.getElementById('reveal-panel');
+  if(!arbs||!arbs.length) { panel.classList.remove('show'); return; }
+
+  let html = '<div class="reveal-title">Arbs that existed this window:</div>';
+  arbs.slice(0,3).forEach((a, idx) => {
+    html += `<div class="reveal-row">
+      <span class="reveal-badge ${idx===0?'badge-best':'badge-other'}">${idx===0?'Best arb':'Arb'}</span>
+      <span>Buy [${a.buyCard}] @ $${a.buyAsk} → Sell [${a.sellCard}] @ $${a.sellBid} = <strong>$${a.pnl}</strong></span>
+    </div>`;
+  });
+  panel.innerHTML = html;
+  panel.classList.add('show');
+
+  // Briefly highlight the relevant cards on the grid
+  setTimeout(() => {
+    arbs.slice(0,2).forEach((a, idx) => {
+      [a.buyIdx, a.sellIdx].forEach(i => {
+        const el = document.getElementById('mcard-' + i);
+        if(el) el.classList.add(idx===0 ? 'best-hi' : 'other-hi');
+      });
+    });
+    setTimeout(() => {
+      document.querySelectorAll('.best-hi,.other-hi')
+              .forEach(el => el.classList.remove('best-hi','other-hi'));
+    }, 2000);
+  }, 200);
+}
+
+// ── Render: ticker (shark only) ───────────────────────────────────────────
+function renderTicker(mids) {
+  const row = document.getElementById('ticker-row');
+  row.innerHTML = Object.keys(mids).map(g =>
+    `<div class="ticker-chip" id="tick-${g}">${g.charAt(0).toUpperCase()+g.slice(1)} <span>$${mids[g]}</span></div>`
+  ).join('');
+}
+
+// ── End-of-window flash ───────────────────────────────────────────────────
+// Called after /step-window returns. Flashes buttons and ticker chips
+// green/red to show how prices moved vs the window-open snapshot.
+function flashWindowEnd(st) {
+  if(!st||!st.liveMode) return;
+  const open  = st.windowOpenMids || {};
+  const now   = st.liveMids       || {};
+
+  (st.slots||[]).forEach((s,i) => {
+    if(!s||s.empty) return;
+    const openMid = (s.goods||[]).reduce((t,{good,qty:gq}) => t+(open[good]||0)*gq, 0);
+    const nowMid  = (s.goods||[]).reduce((t,{good,qty:gq}) => t+(now[good] ||0)*gq, 0);
+    const bb = document.getElementById('buybtn-'+i);
+    const bs = document.getElementById('sellbtn-'+i);
+    if(!bb||!bs) return;
+    const cls = nowMid >= openMid ? 'btn-end-up' : 'btn-end-down';
+    bb.classList.add(cls); bs.classList.add(cls);
+    setTimeout(() => { bb.classList.remove(cls); bs.classList.remove(cls); }, 1200);
+  });
+
+  // Flash ticker chips
+  Object.keys(now).forEach(g => {
+    const chip = document.getElementById('tick-'+g); if(!chip) return;
+    const dir  = now[g] > (open[g]||0) ? 'flash-up' : now[g] < (open[g]||0) ? 'flash-down' : '';
+    if(!dir) return;
+    chip.classList.add(dir);
+    chip.querySelector('span').textContent = (dir==='flash-up'?'↑':'↓') + '$' + now[g];
+    setTimeout(() => {
+      chip.classList.remove(dir);
+      chip.querySelector('span').textContent = '$' + now[g];
+    }, 1200);
+  });
+}
+
+// ── Render: history ───────────────────────────────────────────────────────
+function renderHistory(hist) {
+  const el = document.getElementById('history');
+  if(!hist||!hist.length) { el.innerHTML=''; return; }
+  el.innerHTML = '<div class="hist-label">Trade history</div>' +
+    hist.map(h => {
+      const ps = h.pts===2?'+2':h.pts===1?'+1':h.pts===-1?'−1':'0';
+      return `<div class="hist-item">
+        <span>#${h.id} ${h.desc}</span>
+        <span class="hist-pts ${h.pts>0?'pos':h.pts<0?'neg':''}">${ps} pt · $${h.pnl>=0?'+':''}${h.pnl}</span>
+      </div>`;
+    }).join('');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  
+  // Wipe out old status classes cleanly
+  t.className = 'toast'; 
+  
+  if (msg) {
+    t.textContent = msg;
+    if (type) t.classList.add(type);
+  } else {
+    // Elegant fallback string when there's no live action happening
+    t.textContent = "SYSTEM STATUS: Ready for execution transmission...";
+    }
+}
+
+// ── Player actions ────────────────────────────────────────────────────────
+
+// Buy or Sell button clicked: send delta to backend, re-render
+async function selectCard(idx, delta) {
+  const st = await POST('/select', { idx, delta });
+  renderState(st);
+}
+
+// Execute button: send trade to backend
+async function executeTrade() {
+  const r = await POST('/execute');
+  if(r.error) { showToast(r.error, 'bad'); renderState(r.state); return; }
+
+  showToast(r.msg, r.msgType);
+  renderState(r.state);
+
+  // Handle level-up events
+  if(r.extra === 'SHARK_UNLOCK') {
+    setTimeout(() => {
+      showToast('Boss unlocked — live market! Best arb = +2 pts.', 'great');
+      startCountdown(r.state.windowDuration);
+    }, 400);
+  } else if(r.extra && r.extra.startsWith('LEVEL_UP:')) {
+    const name = r.extra.split(':')[1];
+    setTimeout(() => showToast('Level up → ' + name + '!', 'info'), 400);
+  } else if(r.extra && r.extra.startsWith('SHARK_SUB:')) {
+    const parts = r.extra.split(':');
+    setTimeout(() => showToast(parts[1] + ' unlocked — ' + parts[2] + 's windows!', 'info'), 400);
+  }
+}
+
+// Clear button
+async function clearTrade() {
+  const st = await POST('/clear');
+  renderState(st);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+(async () => {
+  const st = await GET('/state');
+  renderState(st);
+  showToast();
+  // Resume shark mode if the page is refreshed mid-game
+  if(st.liveMode) startCountdown(st.windowDuration);
+})();
+</script>
+</body>
+</html>
