@@ -578,7 +578,7 @@ function routeToScreen(screenTarget) {
   const home = document.getElementById('home-screen');
   const game = document.getElementById('game-screen');
   
-  if (screenTarget === 'game') {
+  if (screenTarget === 'game' || screenTarget === 'boss') {
     home.style.display = 'none';
     game.style.display = 'block';
   } else {
@@ -979,8 +979,12 @@ async function clearTrade() {
   const st = await GET('/state');
   renderState(st);
   showToast();
-  // Resume shark mode if the page is refreshed mid-game
-  if(st.liveMode) startCountdown(st.windowDuration);
+  
+  if (st.liveMode) {
+    // FIX: Actively swap the active UI view layer so the layout matches the state
+    routeToScreen('game');
+    startCountdown(st.windowDuration);
+  }
 })();
 </script>
 </body>
