@@ -94,7 +94,7 @@ const std::vector<LevelDef> STATIC_LEVELS = {
 // Dynamic/boss level config: name, points to unlock, window seconds
 struct BossSubDef { std::string name; int pts; int window; };
 const std::vector<BossSubDef> BOSS_SUBS = {
-    {"Boss I",25,18},{"Boss II",33,15},{"Legend",42,12},{"Apex",52,10}
+    {"Boss I",18,18},{"Boss II",25,15},{"Legend",33,12},{"Apex",40,10}
 };
 
 /* ════════════════════════════════════════════════════════════════════════════
