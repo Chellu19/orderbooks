@@ -1,0 +1,6 @@
+.git
+.gitignore
+*.o
+*.obj
+server
+.DS_Store

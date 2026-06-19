@@ -892,10 +892,11 @@ void setupRoutes(httplib::Server& svr){
         else            { G.qty.fill(0); }
 
         res.set_content(
-            "{\"msg\":"+jStr(msg)+",\"msgType\":"+jStr(mtype)
-            +",\"pts\":"+std::to_string(pts)+",\"pnl\":"+std::to_string(pnl)
-            +",\"extra\":"+jStr(extra)+",\"state\":"+stateJson(G)+"}",
-            "application/json");
+            "{\"msg\":" + jStr(msg) + ",\n\"msgType\":" + jStr(mtype) +
+            ",\"pts\":" + std::to_string(pts) + ",\n\"pnl\":" + std::to_string(pnl) +
+            ",\"extra\":" + jStr(extra) + ",\n\"state\":" + stateJson(G) + "}",
+            "application/json"
+        );
     });
 
     svr.Post("/clear",[](const httplib::Request& req,httplib::Response& res){
@@ -911,42 +912,57 @@ void setupRoutes(httplib::Server& svr){
         res.set_content(stateJson(G),"application/json");
     });
 
-    svr.Post("/step-window",[](const httplib::Request& req,httplib::Response& res){
+    svr.Post("/step-window", [](const httplib::Request& req, httplib::Response& res) {
         addCors(res);
-        
-        // FIX: Check both casing variants to ensure cross-browser compatibility
         std::string sessionId = req.get_header_value("X-User-Session");
         if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
         if(sessionId.empty()) sessionId = "guest_default";
         
         GameState& G = getOrCreateSession(sessionId);
-        stepMids(G);
-        std::string msg,mtype;
-        if(!G.executedThisWindow){
-            bool sel=false; for(int q:G.qty) if(q){sel=true;break;}
-            msg=sel?"Too slow - -1 pt.":"No trade - -1 pt."; mtype="warn";
-            G.arbPts--; G.losses++; G.tradeCount++;
-            G.history.insert(G.history.begin(),{G.tradeCount,0,-1,"Missed window"});
-        } else { msg="Window closed - repricing."; mtype="info"; }
-        G.qty.fill(0);
+        
+        std::string msg = "Window expired.";
+        std::string mtype = "info";
+        
+        // If the player didn't execute a trade, penalize them
+        if (!G.executedThisWindow) {
+            G.arbPts = std::max(0, G.arbPts - 1);
+            msg = "Window expired! -1 pt penalty for inactivity.";
+            mtype = "bad";
+        }
+        
+        G.windowOpenMids = G.liveMids; // Store snapshot before stepping
+        stepMids(G);                   // Step underlying fair values
+        
         res.set_content(
-            "{\"msg\":"+jStr(msg)+",\"msgType\":"+jStr(mtype)+",\"state\":"+stateJson(G)+"}",
-            "application/json");
+            "{\"msg\":" + jStr(msg) + ",\n\"msgType\":" + jStr(mtype) +
+            ",\"state\":" + stateJson(G) + "}", 
+            "application/json"
+        );
     });
 
-    svr.Post("/start-window",[](const httplib::Request& req,httplib::Response& res){
+    svr.Post("/start-window", [](const httplib::Request& req, httplib::Response& res) {
         addCors(res);
-        
-        // FIX: Check both casing variants to ensure cross-browser compatibility
         std::string sessionId = req.get_header_value("X-User-Session");
         if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
         if(sessionId.empty()) sessionId = "guest_default";
         
         GameState& G = getOrCreateSession(sessionId);
-        G.windowOpenMids=G.liveMids;
-        G.currWindowDuration=BOSS_SUBS[G.bossSubIdx].window;
-        placeBossCards(G);
-        res.set_content(stateJson(G),"application/json");
+        
+        placeBossCards(G); // Repopulate the workspace matrix
+        
+        res.set_content(stateJson(G), "application/json");
+    });
+
+    svr.Post("/clear", [](const httplib::Request& req, httplib::Response& res) {
+        addCors(res);
+        std::string sessionId = req.get_header_value("X-User-Session");
+        if(sessionId.empty()) sessionId = req.get_header_value("x-user-session");
+        if(sessionId.empty()) sessionId = "guest_default";
+        
+        GameState& G = getOrCreateSession(sessionId);
+        G.qty.fill(0);
+        
+        res.set_content(stateJson(G), "application/json");
     });
 }
 
