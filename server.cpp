@@ -601,10 +601,9 @@ std::string checkLevelUp(GameState& G){
     }
     if(!G.liveMode){
         for(int l=3;l>=0;l--){
-            if(G.level<=l&&G.arbPts>=STATIC_LEVELS[l].next){
-                G.level=l+1;
-                if(G.level<4) return "LEVEL_UP:"+STATIC_LEVELS[G.level].name;
-                break;
+            if(G.level<=l && G.arbPts>=STATIC_LEVELS[l].next){
+                G.level=std::min(l+1,3);
+                return "LEVEL_UP:"+STATIC_LEVELS[G.level].name;
             }
         }
     }
