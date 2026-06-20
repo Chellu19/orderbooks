@@ -954,15 +954,16 @@ async function executeTrade() {
   renderState(r.state);
 
   // Handle level-up events
-  if(r.extra === 'SHARK_UNLOCK') {
+  if(r.extra === 'BOSS_UNLOCK') {
     setTimeout(() => {
+      routeToScreen('boss');
       showToast('Boss unlocked — live market! Best arb = +2 pts.', 'great');
       startCountdown(r.state.windowDuration);
     }, 400);
   } else if(r.extra && r.extra.startsWith('LEVEL_UP:')) {
     const name = r.extra.split(':')[1];
     setTimeout(() => showToast('Level up → ' + name + '!', 'info'), 400);
-  } else if(r.extra && r.extra.startsWith('SHARK_SUB:')) {
+  } else if(r.extra && r.extra.startsWith('BOSS_SUB:')) {
     const parts = r.extra.split(':');
     setTimeout(() => showToast(parts[1] + ' unlocked — ' + parts[2] + 's windows!', 'info'), 400);
   }
