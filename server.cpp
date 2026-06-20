@@ -889,8 +889,15 @@ void setupRoutes(httplib::Server& svr){
         G.history.insert(G.history.begin(),{G.tradeCount,pnl,pts,desc});
 
         std::string extra=checkLevelUp(G);
-        if(!G.liveMode){ G.qty.fill(0); placeStaticCards(G); }
-        else            { G.qty.fill(0); }
+        if(!G.liveMode){ 
+            G.qty.fill(0); 
+            placeStaticCards(G); 
+        } else { 
+            G.qty.fill(0); 
+            G.windowOpenMids = G.liveMids;
+            stepMids(G);
+            placeBossCards(G);
+        }
 
         res.set_content(
             "{\"msg\":" + jStr(msg) + ",\n\"msgType\":" + jStr(mtype) +
