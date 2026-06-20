@@ -94,7 +94,7 @@ const std::vector<LevelDef> STATIC_LEVELS = {
 // Dynamic/boss level config: name, points to unlock, window seconds
 struct BossSubDef { std::string name; int pts; int window; };
 const std::vector<BossSubDef> BOSS_SUBS = {
-    {"Boss I",18,18},{"Boss II",25,15},{"Legend",33,12},{"Apex",40,10}
+    {"Boss I",20,18},{"Boss II",25,15},{"Legend",33,12},{"Apex",40,10}
 };
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -591,7 +591,7 @@ bool isBalanced(const std::map<std::string,int>& net){
    ════════════════════════════════════════════════════════════════════════════*/
 
 std::string checkLevelUp(GameState& G){
-    if(!G.liveMode&&G.arbPts>=25&&G.level<4){
+    if(!G.liveMode&&G.arbPts>=20&&G.level<4){
         G.level=4; G.liveMode=true;
         initMids(G);
         G.windowOpenMids=G.liveMids;
