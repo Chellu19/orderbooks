@@ -231,7 +231,7 @@ body {
 }
 .level-name{font-family: 'Syncopate', sans-serif; font-size:11px; font-weight:500; color: #fff}
 
-/* ── Live bar (shark mode) ────────────────────────────────── */
+/* ── Live bar (boss mode) ────────────────────────────────── */
 .live-bar {
   background: var(--amber-lt);
   border: 1px solid rgba(255, 186, 0, 0.4);
@@ -385,14 +385,22 @@ body {
 .exec-btn:active{transform: translateY(0); opacity: 0.85}
 
 .clear-btn {
-  background: rgba(0, 255, 179, 0.5); border: 1px solid var(--border); border-radius: var(--radius-md);
-  padding: 9px 14px; font-size: 16px; cursor: pointer; color: var(--muted); transition: all 0.2s; font-family: 'Bitcount Prop Single';
+  background: rgba(249, 82, 96, 0.75); /* Sleek transparent red tint */
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-md);
+  padding: 9px 14px; 
+  font-size: 14px; 
+  cursor: pointer; 
+  color: rgb(255, 179, 179); 
+  transition: all 0.2s; 
+  font-family: 'Syncopate';
 }
+
 .clear-btn:hover {
-  background: rgba(0, 255, 179, 0.75); /* Subtle transparent teal tint */
-  color: #00ffb3;                    /* Neon Teal text */
-  border-color: #00ffb3;             /* Neon Teal glowing border */
-  box-shadow: 0 0 15px rgba(0, 255, 179, 0.3); /* Teal ambient backlight aura */
+  background: rgba(249, 82, 96, 0.25); 
+  color: var(--red);                    /* Neon Red text */
+  border-color: var(--red);             /* Neon Red glowing border */
+  box-shadow: 0 0 15px rgba(249, 82, 96, 0.3); /* Red ambient backlight aura */
   transform: translateY(-1px);
 }
 
@@ -834,7 +842,7 @@ function renderBalance(st) {
   panel.innerHTML = html;
 }
 
-// ── Render: reveal panel (shark only) ────────────────────────────────────
+// ── Render: reveal panel (boss only) ────────────────────────────────────
 function renderReveal(arbs) {
   const panel = document.getElementById('reveal-panel');
   if(!arbs||!arbs.length) { panel.classList.remove('show'); return; }
@@ -864,7 +872,7 @@ function renderReveal(arbs) {
   }, 200);
 }
 
-// ── Render: ticker (shark only) ───────────────────────────────────────────
+// ── Render: ticker (boss only) ───────────────────────────────────────────
 function renderTicker(mids) {
   const row = document.getElementById('ticker-row');
   row.innerHTML = Object.keys(mids).map(g =>
@@ -956,7 +964,6 @@ async function executeTrade() {
   // Handle level-up events
   if(r.extra === 'BOSS_UNLOCK') {
     setTimeout(() => {
-      routeToScreen('boss');
       showToast('Boss unlocked — live market! Best arb = +2 pts.', 'great');
       startCountdown(r.state.windowDuration);
     }, 400);

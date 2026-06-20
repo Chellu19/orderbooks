@@ -591,7 +591,7 @@ bool isBalanced(const std::map<std::string,int>& net){
    ════════════════════════════════════════════════════════════════════════════*/
 
 std::string checkLevelUp(GameState& G){
-    if(!G.liveMode&&G.arbPts>=20&&G.level<4){
+    if(!G.liveMode&&G.arbPts>=18&&G.level<4){
         G.level=4; G.liveMode=true;
         initMids(G);
         G.windowOpenMids=G.liveMids;
@@ -713,17 +713,19 @@ std::string stateJson(const GameState& G){
     }
     s+="},";
     s+="\"lastArbs\":[";
-    for(int i=0;i<(int)G.lastArbs.size()&&i<3;i++){
-        if(i)s+=",";
-        const auto& a=G.lastArbs[i];
-        s+="{\"pnl\":"+std::to_string(a.pnl)
-          +",\"buyIdx\":"+std::to_string(a.buyIdx)
-          +",\"sellIdx\":"+std::to_string(a.sellIdx)
-          +",\"buyCard\":"+jStr(G.slots[a.buyIdx].empty?"?":cardTitle(G.slots[a.buyIdx]))
-          +",\"sellCard\":"+jStr(G.slots[a.sellIdx].empty?"?":cardTitle(G.slots[a.sellIdx]))
-          +",\"buyAsk\":"+std::to_string(G.slots[a.buyIdx].empty?0:G.slots[a.buyIdx].ask)
-          +",\"sellBid\":"+std::to_string(G.slots[a.sellIdx].empty?0:G.slots[a.sellIdx].bid)
-          +"}";
+    if (!G.liveMode || G.executedThisWindow) {
+        for(int i=0; i<(int)G.lastArbs.size() && i<3; i++){
+            if(i) s+=",";
+            const auto& a=G.lastArbs[i];
+            s+="{\"pnl\":"+std::to_string(a.pnl)
+              +",\"buyIdx\":"+std::to_string(a.buyIdx)
+              +",\"sellIdx\":"+std::to_string(a.sellIdx)
+              +",\"buyCard\":"+jStr(G.slots[a.buyIdx].empty?"?":cardTitle(G.slots[a.buyIdx]))
+              +",\"sellCard\":"+jStr(G.slots[a.sellIdx].empty?"?":cardTitle(G.slots[a.sellIdx]))
+              +",\"buyAsk\":"+std::to_string(G.slots[a.buyIdx].empty?0:G.slots[a.buyIdx].ask)
+              +",\"sellBid\":"+std::to_string(G.slots[a.sellIdx].empty?0:G.slots[a.sellIdx].bid)
+              +"}";
+        }
     }
     s+="],";
     s+="\"history\":[";
