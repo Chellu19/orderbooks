@@ -1005,14 +1005,31 @@ async function selectCard(idx, delta) {
 // Execute button: send trade to backend
 async function executeTrade() {
   const r = await POST('/execute');
-  if(r.error) { showToast(r.error, 'bad'); renderState(r.state); return; }
+  if(r.error) { 
+    showToast(r.error, 'bad'); 
+    renderState(r.state); 
+    return; 
+  }
 
   showToast(r.msg, r.msgType);
   renderState(r.state);
 
+  // If we are operating in a live market window and the trade successfully went through
+  if (r.state && r.state.liveMode) {
+    // 1. Wipe out the old ticking countdown loop immediately
+    clearInterval(countdownTimer);
+    
+    // 2. Hide any lingering highlight panels from the previous transmission loop
+    document.getElementById('reveal-panel').classList.remove('show');
+    
+    // 3. Initiate a brand-new live countdown loop using the server's fresh time budget
+    startCountdown(r.state.windowDuration);
+  }
+
   // Handle level-up events
   if(r.extra === 'BOSS_UNLOCK') {
     setTimeout(() => {
+      routeToScreen('boss');
       showToast('Boss unlocked — live market! Best arb = +2 pts.', 'great');
       startCountdown(r.state.windowDuration);
     }, 400);
